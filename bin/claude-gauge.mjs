@@ -9,6 +9,7 @@
 //   claude-gauge line            one line (Claude Code status line, tmux, prompts)
 //   claude-gauge swiftbar        macOS menu bar (SwiftBar/xbar plugin output)
 //   claude-gauge json            everything, as JSON
+//   claude-gauge install         set up the status line, menu bar and iPhone widget (--check: just report; --yes: no questions)
 //   claude-gauge setup           store your Admin API key and starting balance
 //   claude-gauge balance 42.50   set the credit balance you see in the Console (resets the estimate)
 //   claude-gauge topup 25        add a top-up to the current estimate
@@ -23,6 +24,7 @@ import { loadCache, loadConfig, loadPlan, readKey, saveCache, saveConfig, savePl
 import { dayKey, spendOn, startOfUtcDay, startOfUtcMonth, summarize, usd } from "../src/core.mjs"
 import { planFromStatusLine, summarizePlan } from "../src/plan.mjs"
 import { card, line, nothingYet, swiftbar } from "../src/render.mjs"
+import { install } from "../src/install.mjs"
 
 const args = process.argv.slice(2)
 const flags = new Set(args.filter((a) => a.startsWith("--")))
@@ -160,11 +162,34 @@ async function setup() {
   console.log(`\nSaved to ${CONFIG_PATH}. Try: claude-gauge\n`)
 }
 
+async function runInstall() {
+  const check = flags.has("--check")
+  const yes = flags.has("--yes")
+  let rl = null
+  const ask = async (q) => {
+    if (yes) return true
+    if (!process.stdin.isTTY) {
+      console.log(`(not asked, so not done: ${q} Run with --yes to go ahead.)`)
+      return false
+    }
+    rl ??= createInterface({ input: process.stdin, output: process.stdout })
+    return !/^n/i.test((await rl.question(`${q} [Y/n] `)).trim())
+  }
+  console.log(check ? "\nclaude-gauge install --check (nothing will be changed)\n" : "\nclaude-gauge install\n")
+  const r = await install({ ask, dryRun: check })
+  rl?.close()
+  const show = (title, mark, items) => items.length && console.log(`${title}\n${items.map((x) => `  ${mark} ${x}`).join("\n")}\n`)
+  show(check ? "Would do:" : "Done:", "✓", r.done)
+  show("Already set / skipped:", "·", r.skipped)
+  show("Needs you:", "→", r.todo)
+}
+
 async function main() {
   const now = new Date()
   let config = loadConfig()
 
   if (cmd === "setup") return setup()
+  if (cmd === "install") return runInstall()
   if (cmd === "balance") {
     config = await setBalance(config, Number.parseFloat(String(value).replace(/[$,]/g, "")), now)
     console.log(`Balance set to ${usd(config.credit.balance_usd)} as of now.`)

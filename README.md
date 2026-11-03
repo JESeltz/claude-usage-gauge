@@ -19,19 +19,24 @@ Two gauges, use either or both:
 - **Nothing leaves your machine** except to Anthropic. Keys stay in the macOS Keychain; the phone widget only sees the summary.
 - **Honest about what it knows.** Plan usage is as of your last Claude Code reply. API credit is an **estimate**, because Anthropic's API reports spend but not your balance. [Details](docs/GUIDE.md#what-it-can-and-cant-know).
 
+## Easiest: let Claude install it
+
+Open Claude Code and paste:
+
+> Install the Claude usage gauge for me: https://github.com/JESeltz/claude-usage-gauge — follow its INSTALL-WITH-CLAUDE.md.
+
+Claude checks your setup, installs it, asks before changing your settings, and tells you the few steps only you can do (like placing the iPhone widget). [What it follows](INSTALL-WITH-CLAUDE.md).
+
 ## Quick start: Claude Pro / Max
 
 ```bash
 git clone https://github.com/JESeltz/claude-usage-gauge.git
 cd claude-usage-gauge
 npm link                  # puts `claude-gauge` on your PATH
+claude-gauge install       # status line, plus menu bar and iPhone widget if you have them
 ```
 
-Add to `~/.claude/settings.json`:
-
-```json
-{ "statusLine": { "type": "command", "command": "claude-gauge line" } }
-```
+(Or add it by hand to `~/.claude/settings.json`: `{ "statusLine": { "type": "command", "command": "claude-gauge line" } }`.)
 
 Start Claude Code and send a message. Under the prompt:
 
@@ -82,6 +87,7 @@ claude-gauge setup        # store an Admin API key and your current balance
 | `claude-gauge line` | One line, for Claude Code's status line (reads your plan usage from it) |
 | `claude-gauge swiftbar` | Menu-bar plugin output |
 | `claude-gauge json` | Everything as JSON |
+| `claude-gauge install` | Set up the status line, menu bar and iPhone widget (`--check` to preview, `--yes` for no questions) |
 | `claude-gauge setup` | API credit: store your key and balance |
 | `claude-gauge balance 42.50` | API credit: re-enter the balance shown in the Console |
 | `claude-gauge topup 25` | API credit: you added credit |

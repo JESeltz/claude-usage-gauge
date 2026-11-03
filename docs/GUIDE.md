@@ -2,6 +2,8 @@
 
 From nothing to a battery gauge for your Claude usage, in Claude Code, your terminal, the Mac menu bar and your iPhone. Every step says what you should see when it worked.
 
+**Rather not do it yourself?** Open Claude Code and paste: *Install the Claude usage gauge for me: https://github.com/JESeltz/claude-usage-gauge — follow its INSTALL-WITH-CLAUDE.md.*
+
 ![All four places the gauge shows up](img/hero.png)
 
 **Two gauges, use either or both:**
@@ -61,7 +63,7 @@ That's the same thing you'd do with a checkbook. It's accurate as long as the on
 
    ✅ `claude-gauge --demo` prints two sample cards.
 
-2. **Turn on the status line.** Open `~/.claude/settings.json` (create it if it doesn't exist) and add the `statusLine` block. If the file already has settings, put it inside the existing `{ }` with a comma after the previous entry:
+2. **Turn on the status line.** Run `claude-gauge install` (it asks before changing anything, backs up your settings, and never replaces a status line you already have; it also sets up the menu bar and iPhone widget if you have SwiftBar and Scriptable). Or do it by hand: open `~/.claude/settings.json` (create it if it doesn't exist) and add the `statusLine` block. If the file already has settings, put it inside the existing `{ }` with a comma after the previous entry:
 
    ```json
    {
