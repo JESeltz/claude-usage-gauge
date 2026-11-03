@@ -36,10 +36,35 @@ Add to `~/.claude/settings.json`:
 Start Claude Code and send a message. Under the prompt:
 
 ```
-🔋 5h 62% ██░░ ↻3:52 PM · wk 39% ██░░ ↻Fri 1 PM · session $0.84
+🔋 5h 75% ███░ ↻4:50 PM · wk 81% ███░ ↻Sat 1 PM · session $0.84
 ```
 
 Run `claude-gauge` in any terminal for the full card. [Menu bar](docs/GUIDE.md#part-5--the-mac-menu-bar) and [iPhone widget](docs/GUIDE.md#part-6--iphone-home-screen-widget) take a few minutes more.
+
+## What the numbers mean
+
+**Claude Pro / Max** (from Claude Code):
+
+| You see | It means |
+|---|---|
+| `5h 75%` | You have **75% left** of your plan's 5-hour usage limit (25% used). |
+| `↻4:50 PM` | That 5-hour window resets at 4:50 PM, back to 100%. |
+| `wk 81%` | You have **81% left** of your weekly limit. |
+| `↻Sat 1 PM` | The weekly limit resets Saturday at 1 PM. |
+| Menu bar `Claude 75%` | The **lower** of the two, because that's the one that will stop you first. |
+| `session $0.84` | Claude Code's estimate of what this session would cost at API prices. On a plan you don't pay it; it shows how heavy the session is. |
+
+The percentages are shares of your plan's limits, not token counts. Bigger models and longer sessions use them faster. When one reaches 0%, Claude limits you until the window resets.
+
+**API credit** (from Anthropic's Cost API):
+
+| You see | It means |
+|---|---|
+| `≈ $27.24 left` / `100%` | The balance you entered, minus spend since; the % is how much of that balance is left. |
+| `~$10.99/day` | Average spend over the last 7 full days. |
+| `about 2 days at this pace` | Credit left ÷ that average. |
+
+Colors: green, then amber at 25% left, red at 10%.
 
 ## Add API credit (optional)
 

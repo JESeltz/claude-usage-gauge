@@ -76,8 +76,10 @@ That's the same thing you'd do with a checkbook. It's accurate as long as the on
 
    ✅ Under the prompt: `🔋 5h 62% ██░░ ↻3:52 PM · wk 39% ██░░ ↻Fri 1 PM · session $0.84`
 
-   - **5h / wk:** percent of your 5-hour and weekly limits **left**, and when each resets (↻).
-   - **session:** Claude Code's own estimate of this session's cost at API list prices. On a plan, it's a way to see how heavy a session is, not a bill.
+   - **5h 62%:** you have 62% **left** of your plan's 5-hour usage limit. **↻3:52 PM** is when that window resets to 100%.
+   - **wk 39%:** you have 39% left of your weekly limit, which resets at the time after its ↻.
+   - These are shares of your plan's limits, not token counts. Bigger models and longer sessions use them faster. When one reaches 0%, Claude limits you until that window resets, so the lower number is the one to watch. (The menu bar shows the lower one.)
+   - **session:** Claude Code's own estimate of this session's cost at API list prices. On a plan you don't pay it; it shows how heavy a session is.
    - The battery turns 🪫 and the numbers go amber at 25% left and red at 10%.
 
 4. **Anywhere else:** run `claude-gauge` in a terminal for the card. For the menu bar and phone, see [Part 5](#part-5--the-mac-menu-bar) and [Part 6](#part-6--iphone-home-screen-widget).
