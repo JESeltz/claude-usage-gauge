@@ -89,6 +89,30 @@ claude-gauge setup        # store an Admin API key and your current balance
 
 Flags: `--refresh` (skip the 5-minute cache), `--demo`, `--no-color`.
 
+## Works on
+
+| Piece | macOS | Windows | Linux | iPhone / iPad | Android |
+|---|---|---|---|---|---|
+| Claude Code status line | ✅ | ✅ \* | ✅ \* | | |
+| Terminal card | ✅ | ✅ \* | ✅ \* | | |
+| Menu bar ([SwiftBar](https://swiftbar.app)) | ✅ | — | ⚠️ † | | |
+| Home-screen widget ([Scriptable](https://scriptable.app)) | | | | ✅ | — |
+
+\* Should work but untested: it's plain Node with no Mac-specific code, and Claude Code runs on all three. Without the macOS Keychain, an API key goes in the `CLAUDE_GAUGE_ADMIN_KEY` environment variable (Pro/Max needs no key).
+† Some Linux desktops have SwiftBar-style apps (e.g. Argos on GNOME) that may run the same plugin. Untested.
+— Not built yet. Every run writes all the numbers to one JSON file (`claude-gauge json`), so a Windows tray app or an Android widget could read it; contributions welcome.
+
+**Plans:**
+
+| Plan | Plan gauge (5-hour / weekly) | API credit gauge |
+|---|---|---|
+| Claude Pro, Max, Ultra | ✅ Claude Code provides these limits | Only if you also pay for the API |
+| Claude Team / Enterprise | Not documented: Anthropic lists Pro, Max and Ultra. Install it and check whether "5h / wk" appears after a reply | Org-wide spend, for an admin (Enterprise orgs use a different admin key type; untested) |
+| Free claude.ai plan | — (no Claude Code) | — |
+| API only (no plan) | — | ✅ |
+
+It's a personal gauge: each person installs it and sees their own plan usage. There's no shared team dashboard. The API gauge shows the whole organization's spend and needs an org admin's key, so it's meant for whoever watches the bill.
+
 ## Limits, plainly
 
 - **Plan usage comes only from Claude Code.** Anthropic doesn't publish Pro/Max limits through any API. Claude Code passes them to its status line after each reply, so the card, menu bar and phone show the latest reading and how old it is. A window that has reset since then shows as reset.
