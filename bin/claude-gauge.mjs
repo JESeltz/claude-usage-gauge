@@ -10,6 +10,8 @@
 //   claude-gauge swiftbar        macOS menu bar (SwiftBar/xbar plugin output)
 //   claude-gauge json            everything, as JSON
 //   claude-gauge install         set up the status line, menu bar and iPhone widget (--check: just report; --yes: no questions)
+//   claude-gauge widget-background <empty-page.png> <with-widget.png>
+//                                make the iPhone widget "transparent" (your wallpaper behind it)
 //   claude-gauge setup           store your Admin API key and starting balance
 //   claude-gauge balance 42.50   set the credit balance you see in the Console (resets the estimate)
 //   claude-gauge topup 25        add a top-up to the current estimate
@@ -20,11 +22,14 @@
 import { createInterface } from "node:readline/promises"
 import { platform } from "node:os"
 import { fetchSpend, ApiError } from "../src/api.mjs"
-import { loadCache, loadConfig, loadPlan, readKey, saveCache, saveConfig, savePlan, storeKeyInKeychain, writeICloud, CONFIG_PATH } from "../src/config.mjs"
+import { loadCache, loadConfig, loadPlan, readKey, saveCache, saveConfig, savePlan, storeKeyInKeychain, writeICloud, CONFIG_PATH, ICLOUD_PATH } from "../src/config.mjs"
 import { dayKey, spendOn, startOfUtcDay, startOfUtcMonth, summarize, usd } from "../src/core.mjs"
 import { planFromStatusLine, summarizePlan } from "../src/plan.mjs"
 import { card, line, nothingYet, swiftbar } from "../src/render.mjs"
 import { install } from "../src/install.mjs"
+import { cropTo, widgetBox } from "../src/background.mjs"
+import { existsSync } from "node:fs"
+import { dirname as dirOf, join as joinPath } from "node:path"
 
 const args = process.argv.slice(2)
 const flags = new Set(args.filter((a) => a.startsWith("--")))
@@ -45,7 +50,7 @@ function demoDaily(now) {
 /** A sample Pro/Max reading for --demo. */
 function demoPlan(now) {
   const t = Math.floor(now.getTime() / 1000)
-  return { captured_at: new Date(now.getTime() - 3 * 60000).toISOString(), five_hour: { used_percentage: 38, resets_at: t + 2 * 3600 + 1200 }, seven_day: { used_percentage: 61, resets_at: t + 3 * 86400 } }
+  return { captured_at: new Date(now.getTime() - 3 * 60000).toISOString(), windows: { five_hour: { used_percentage: 38, resets_at: t + 2 * 3600 + 1200 }, seven_day: { used_percentage: 61, resets_at: t + 3 * 86400 } } }
 }
 
 /** The earliest day any display needs: this month, the last week (burn rate), and the balance date. */
@@ -162,6 +167,21 @@ async function setup() {
   console.log(`\nSaved to ${CONFIG_PATH}. Try: claude-gauge\n`)
 }
 
+/** Crop an empty home-screen screenshot to where the widget sits, for a see-through widget. */
+function widgetBackground() {
+  const [empty, withWidget] = args.filter((a) => !a.startsWith("--")).slice(1)
+  if (!empty || !withWidget) throw new Error("Usage: claude-gauge widget-background <empty-page.png> <with-widget.png> (see the guide, Part 6)")
+  const dir = dirOf(ICLOUD_PATH)
+  if (!existsSync(dir)) throw new Error("Scriptable's iCloud folder isn't on this Mac yet (guide, Part 6).")
+  const box = widgetBox(empty, withWidget)
+  if (!box) throw new Error("Couldn't find the widget in the second screenshot. It must show the widget with its usual dark background.")
+  const dest = joinPath(dir, "claude-gauge-background.png")
+  cropTo(empty, box, dest)
+  console.log(`Found the widget at x ${box.x}, y ${box.y} (${box.w} × ${box.h} px) and saved that piece of your wallpaper to Scriptable.`)
+  console.log("The widget picks it up on its next refresh (or tap it in Scriptable to see it now).")
+  console.log("Changed your wallpaper or moved the widget? Take new screenshots and run this again; to go back to the dark card, delete claude-gauge-background.png from Scriptable's folder.")
+}
+
 async function runInstall() {
   const check = flags.has("--check")
   const yes = flags.has("--yes")
@@ -190,6 +210,7 @@ async function main() {
 
   if (cmd === "setup") return setup()
   if (cmd === "install") return runInstall()
+  if (cmd === "widget-background") return widgetBackground()
   if (cmd === "balance") {
     config = await setBalance(config, Number.parseFloat(String(value).replace(/[$,]/g, "")), now)
     console.log(`Balance set to ${usd(config.credit.balance_usd)} as of now.`)
@@ -242,7 +263,7 @@ async function main() {
   if (!DEMO && (api || plan)) writeICloud(view)
 
   if (cmd === "json") console.log(JSON.stringify(view, null, 2))
-  else if (cmd === "line") console.log(line(view, session?.cost?.total_cost_usd))
+  else if (cmd === "line") console.log(line(view, session?.cost?.total_cost_usd, config.show_session !== false))
   else if (cmd === "swiftbar") console.log(swiftbar(view, config.menu_label))
   else console.log(api || plan ? card(view) : nothingYet())
   if (apiError && cmd !== "line" && cmd !== "swiftbar") console.error(`(API credit unavailable: ${apiError.message})`)

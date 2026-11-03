@@ -41,7 +41,7 @@ claude-gauge install       # status line, plus menu bar and iPhone widget if you
 Start Claude Code and send a message. Under the prompt:
 
 ```
-🔋 5h 75% ███░ ↻4:50 PM · wk 81% ███░ ↻Sat 1 PM · session $0.84
+🔋 5h 75% ███░ ↻4:50 PM · wk 81% ███░ ↻Sat 1 PM · session ≈$0.84 API-equiv
 ```
 
 Run `claude-gauge` in any terminal for the full card. [Menu bar](docs/GUIDE.md#part-5--the-mac-menu-bar) and [iPhone widget](docs/GUIDE.md#part-6--iphone-home-screen-widget) take a few minutes more.
@@ -56,8 +56,8 @@ Run `claude-gauge` in any terminal for the full card. [Menu bar](docs/GUIDE.md#p
 | `↻4:50 PM` | That 5-hour window resets at 4:50 PM, back to 100%. |
 | `wk 81%` | You have **81% left** of your weekly limit. |
 | `↻Sat 1 PM` | The weekly limit resets Saturday at 1 PM. |
-| Menu bar `Claude 75%` | The **lower** of the two, because that's the one that will stop you first. |
-| `session $0.84` | Claude Code's estimate of what this session would cost at API prices. On a plan you don't pay it; it shows how heavy the session is. |
+| Menu bar `Claude 75% · 81% · $21` | 5-hour left, week left, then API credit left (if you set it up). Each number turns amber, then red, as it runs low. Click it for labels and reset times. |
+| `session ≈$0.84 API-equiv` | Claude Code's running estimate of what **this whole session** would cost at API list prices. It only goes up as the session goes on (a long session can reach hundreds of dollars). On a plan you don't pay it; it shows how much work the session has done. Hide it with `"show_session": false` in `~/.config/claude-usage-gauge/config.json`. |
 
 The percentages are shares of your plan's limits, not token counts. Bigger models and longer sessions use them faster. When one reaches 0%, Claude limits you until the window resets.
 
@@ -88,6 +88,7 @@ claude-gauge setup        # store an Admin API key and your current balance
 | `claude-gauge swiftbar` | Menu-bar plugin output |
 | `claude-gauge json` | Everything as JSON |
 | `claude-gauge install` | Set up the status line, menu bar and iPhone widget (`--check` to preview, `--yes` for no questions) |
+| `claude-gauge widget-background <empty.png> <with-widget.png>` | Make the iPhone widget see-through (your wallpaper behind it) |
 | `claude-gauge setup` | API credit: store your key and balance |
 | `claude-gauge balance 42.50` | API credit: re-enter the balance shown in the Console |
 | `claude-gauge topup 25` | API credit: you added credit |

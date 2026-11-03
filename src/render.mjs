@@ -31,6 +31,8 @@ function when(iso) {
 }
 
 const resets = (w) => (w.reset ? "reset" : w.resets_at ? `resets ${resetLabel(w.resets_at)}` : "")
+const per = (p) => (p === "daily" ? "today" : p === "weekly" ? "this week" : p === "monthly" ? "this month" : "")
+const spendText = (sp) => `${usd(sp.used_usd)} of ${usd(sp.limit_usd)}${per(sp.period) ? ` ${per(sp.period)}` : ""}`
 
 function box(title, lines) {
   const width = Math.max(title.length + 4, ...lines.map((l) => plain(l).length)) + 2
@@ -43,7 +45,9 @@ function box(title, lines) {
 export function card({ api, plan }) {
   const out = []
   if (plan) {
-    const lines = plan.windows.map((w) => `${w.label.padEnd(6)} ${paint(ANSI[w.level], bar(w.left, 20))}  ${paint(ANSI.bold, `${w.left}% left`)}  ${paint(ANSI.dim, resets(w))}`)
+    const pad = Math.max(6, ...plan.windows.map((w) => w.label.length))
+    const lines = plan.windows.map((w) => `${w.label.padEnd(pad)} ${paint(ANSI[w.level], bar(w.left, 20))}  ${paint(ANSI.bold, `${w.left}% left`)}  ${paint(ANSI.dim, resets(w))}`)
+    if (plan.spend) lines.push(`${"Credits".padEnd(pad)} ${paint(ANSI[plan.spend.level], spendText(plan.spend))} ${paint(ANSI.dim, "(spent past your plan limits)")}`)
     lines.push(paint(ANSI.dim, `from Claude Code · ${ageLabel(plan.age_min)}`))
     out.push(box("Claude plan", lines))
   }
@@ -72,9 +76,9 @@ export function nothingYet() {
 }
 
 /** One line: Claude Code's status line, tmux, a shell prompt. */
-export function line({ api, plan }, session) {
+export function line({ api, plan }, session, showSession = true) {
   const parts = []
-  const levels = [plan?.tightest.level, api?.pct !== null && api?.pct !== undefined ? api.level : null].filter(Boolean)
+  const levels = [plan?.tightest?.level, api?.pct !== null && api?.pct !== undefined ? api.level : null].filter(Boolean)
   const icon = worst(...levels) === "ok" ? "🔋" : "🪫"
   if (plan) {
     parts.push(
@@ -82,6 +86,7 @@ export function line({ api, plan }, session) {
         .map((w) => paint(ANSI[w.level], `${w.short} ${w.left}% ${bar(w.left, 4)}`) + (w.reset ? "" : w.resets_at ? paint(ANSI.dim, ` ↻${resetLabel(w.resets_at)}`) : ""))
         .join(" · "),
     )
+    if (plan.spend && plan.spend.used_usd > 0) parts.push(paint(ANSI[plan.spend.level], `credits ${usd(plan.spend.used_usd)}/${usd(plan.spend.limit_usd)}`))
   }
   if (api) {
     if (api.mode === "credit") parts.push(paint(ANSI[api.level], `API ≈${usd(api.remaining)}${plan ? "" : ` (${api.pct}%)`}`))
@@ -89,24 +94,38 @@ export function line({ api, plan }, session) {
     if (!plan) parts.push(`today ${usd(api.today)}`)
     if (api.stale) parts.push(paint(ANSI.dim, "offline"))
   }
-  if (Number.isFinite(session)) parts.push(paint(ANSI.dim, `session ${usd(session)}`))
+  // Claude Code's estimate of the whole session at API list prices; on a plan you don't pay it.
+  if (Number.isFinite(session) && showSession) parts.push(paint(ANSI.dim, `session ≈${session >= 10 ? `$${Math.round(session)}` : usd(session)} API-equiv`))
   if (parts.length === 0) return "claude-gauge: plan usage appears after Claude's first reply · API credit: run `claude-gauge setup`"
   return `${icon} ${parts.join(" · ")}`
 }
 
-const SF = (pct) => (pct >= 88 ? "battery.100" : pct >= 63 ? "battery.75" : pct >= 38 ? "battery.50" : pct >= 13 ? "battery.25" : "battery.0")
 
 /** SwiftBar / xbar menu-bar plugin output: title line, then the dropdown. */
 export function swiftbar({ api, plan }, label = "Claude") {
   // The menu-bar number is the plan's tighter window when there's a plan, else the API battery.
-  const pct = plan ? plan.tightest.left : api?.pct ?? null
-  const lvl = worst(plan?.tightest.level ?? "ok", api && api.pct !== null ? api.level : "ok")
-  const value = pct !== null ? `${pct}%` : api ? usd(api.month) : "—"
-  const title = label ? `${label} ${value}` : value
-  const out = [`${title} | sfimage=${pct !== null ? SF(pct) : "dollarsign.circle"} color=${HEX[lvl]}`, "---"]
+  const pct = plan?.tightest ? plan.tightest.left : api?.pct ?? null
+  const lvl = worst(plan?.tightest?.level ?? "ok", api && api.pct !== null ? api.level : "ok")
+  // Each number in its own status color, as 256-color codes nearest to HEX (green 77, amber 214, red 203).
+  const ANSI256 = { ok: 77, warn: 214, critical: 203 }
+  const tint = (level, text) => `\x1b[38;5;${ANSI256[level] ?? ANSI256.ok}m${text}\x1b[0m`
+  // With a plan, kept short to fit beside the notch: 5-hour %, week %, then API dollars left
+  // rounded ("95% · 80% · $21"). The dropdown says which is which.
+  const parts = []
+  if (plan?.windows.length) {
+    for (const w of plan.windows.filter((w) => w.key === "five_hour" || w.key === "seven_day")) parts.push(tint(w.level, `${w.left}%`))
+    if (api && (api.mode === "credit" || api.mode === "budget") && Number.isFinite(api.remaining)) parts.push(tint(api.level, `$${Math.round(api.remaining)}`))
+  } else {
+    parts.push(tint(lvl, pct !== null ? `${pct}%` : api ? usd(api.month) : "—"))
+  }
+  const numbers = parts.join(" · ")
+  // The label in Claude's orange (ANSI 256-color 173, the nearest to #D97757).
+  const title = label ? `\x1b[38;5;173m${label}\x1b[0m ${numbers}` : numbers
+  const out = [`${title} | ansi=true`, "---"]
   if (plan) {
     out.push("Claude plan | size=11 color=gray")
     for (const w of plan.windows) out.push(`${w.label}: ${w.left}% left${w.reset ? " (reset)" : w.resets_at ? ` · resets ${resetLabel(w.resets_at)}` : ""} | color=${HEX[w.level]}`)
+    if (plan.spend) out.push(`Credits past plan limits: ${spendText(plan.spend)} | color=${HEX[plan.spend.level]}`)
     out.push(`From Claude Code, ${ageLabel(plan.age_min)} | color=gray`)
   }
   if (api) {

@@ -76,11 +76,11 @@ That's the same thing you'd do with a checkbook. It's accurate as long as the on
 
 3. **Start Claude Code and send any message.** Plan usage arrives with Claude's first reply.
 
-   ✅ Under the prompt: `🔋 5h 62% ██░░ ↻3:52 PM · wk 39% ██░░ ↻Fri 1 PM · session $0.84`
+   ✅ Under the prompt: `🔋 5h 62% ██░░ ↻3:52 PM · wk 39% ██░░ ↻Fri 1 PM · session ≈$0.84 API-equiv`
 
    - **5h 62%:** you have 62% **left** of your plan's 5-hour usage limit. **↻3:52 PM** is when that window resets to 100%.
    - **wk 39%:** you have 39% left of your weekly limit, which resets at the time after its ↻.
-   - These are shares of your plan's limits, not token counts. Bigger models and longer sessions use them faster. When one reaches 0%, Claude limits you until that window resets, so the lower number is the one to watch. (The menu bar shows the lower one.)
+   - These are shares of your plan's limits, not token counts. Bigger models and longer sessions use them faster. When one reaches 0%, Claude limits you until that window resets, so the lower number is the one to watch. (The menu bar shows both.)
    - **session:** Claude Code's own estimate of this session's cost at API list prices. On a plan you don't pay it; it shows how heavy a session is.
    - The battery turns 🪫 and the numbers go amber at 25% left and red at 10%.
 
@@ -224,11 +224,11 @@ Claude Code can show any command's output in a line under the prompt. The gauge'
 
 | You have | The line |
 |---|---|
-| Pro / Max | `🔋 5h 62% ██░░ ↻3:52 PM · wk 39% ██░░ ↻Fri 1 PM · session $0.84` |
-| API credit | `🔋 36% █░░░ · ≈$18.09 left · today $3.41 · session $0.84` |
-| Both | `🔋 5h 62% ██░░ ↻3:52 PM · wk 39% ██░░ ↻Fri 1 PM · API ≈$18.09 · session $0.84` |
+| Pro / Max | `🔋 5h 62% ██░░ ↻3:52 PM · wk 39% ██░░ ↻Fri 1 PM · session ≈$0.84 API-equiv` |
+| API credit | `🔋 36% █░░░ · ≈$18.09 left · today $3.41 · session ≈$0.84 API-equiv` |
+| Both | `🔋 5h 62% ██░░ ↻3:52 PM · wk 39% ██░░ ↻Fri 1 PM · API ≈$18.09 · session ≈$0.84 API-equiv` |
 
-- **session $0.84** is Claude Code's own estimate for the current session at API list prices. The rest is the gauge.
+- **session ≈$0.84 API-equiv** is Claude Code's own estimate for the current session at API list prices. The rest is the gauge.
 - Plan usage arrives with Claude's first reply in a session, and updates with each one.
 - The line updates as you work. The API numbers are cached for 5 minutes, so it stays instant and never hammers Anthropic's API.
 - The battery turns 🪫 and the numbers go amber at 25% left and red at 10%.
@@ -251,11 +251,11 @@ Claude Code can show any command's output in a line under the prompt. The gauge'
 
 4. Click SwiftBar's menu and choose **Refresh All**.
 
-✅ A battery icon with a percentage appears in the menu bar: your plan's tighter window (5-hour or weekly, whichever has less left), or your API credit if you don't have a plan reading. Click it for both windows and when they reset, the API details, links to your Claude usage settings and Anthropic billing, and **Refresh**.
+✅ **Claude 75% · 81% · $21** appears in the menu bar: 5-hour window left, week left, and API credit left (only if you set it up in Part 3). Each number is green, then amber, then red as it runs low. Without a plan reading it shows your API credit percentage. Click it for both windows and when they reset, the API details, links to your Claude usage settings and Anthropic billing, and **Refresh**.
 
 - The `5m` in the file name means it refreshes every 5 minutes. Rename it `claude-gauge.15m.sh` to refresh less often.
 - The icon is green, amber or red, like the terminal.
-- It reads **Claude 75%**. To change the word, set `"menu_label"` in `~/.config/claude-usage-gauge/config.json` (e.g. `"Max"`, or `""` for just the number).
+- To change the word "Claude", set `"menu_label"` in `~/.config/claude-usage-gauge/config.json` (e.g. `"Max"`, or `""` for just the numbers).
 - If you see ⚠︎: click it to read the message. Usually `npm link` wasn't run. Menu-bar apps don't load your shell profile, so the plugin looks for Node in Homebrew, Volta, fnm and nvm's usual places; if yours is elsewhere, add its folder to the `PATH` line at the top of the plugin.
 
 ---
@@ -280,9 +280,30 @@ The widget reads a small summary file that the gauge on your Mac writes to iClou
 6. Tap ▶︎ to preview. ✅ A small dark widget with the battery.
 7. Go to the home screen, **long-press → Edit → Add Widget → Scriptable**, choose the **small** size, add it, then long-press it → **Edit Widget** → **Script: Claude Gauge**.
 
-✅ The battery on your home screen. Tap it to open your Claude usage settings (or Anthropic billing, for API-only).
+✅ The battery on your home screen. **Tap it to refresh:** that runs the script in Scriptable, which reloads the widget with the newest numbers.
 
-- iOS decides how often widgets refresh, usually every 15–30 minutes. The footer shows how old the numbers are if they're more than 30 minutes old.
+### 6.1 Optional: make the widget see-through
+
+Instead of a dark card, the widget can show the exact piece of your wallpaper behind it, so the battery bars look like they float on your home screen. It takes two iPhone screenshots:
+
+1. **Your home screen with the widget on it**, as it is now (the dark card shows where it sits).
+2. **An empty home-screen page:** long-press the home screen, swipe left past your last page to the empty one, and take the screenshot there (the Edit/Done buttons in the corner don't matter).
+
+AirDrop both to your Mac, then run:
+
+```bash
+claude-gauge widget-background ~/Downloads/empty-page.PNG ~/Downloads/with-widget.PNG
+```
+
+✅ `Found the widget at x 87, y 251 (524 × 524 px) and saved that piece of your wallpaper to Scriptable.` Within a few minutes the dark card is gone. The text gets a soft shadow so it stays readable over bright skies.
+
+- It finds the widget by comparing the two screenshots, so it works on any iPhone and any widget position.
+- Changed your wallpaper or moved the widget? Take the two screenshots again and rerun it.
+- To go back to the dark card, delete `claude-gauge-background.png` from the Scriptable folder in iCloud Drive.
+
+### 6.2 Notes
+
+- iOS decides how often widgets refresh on their own (the widget asks for every 5 minutes; iOS usually allows every 15–30). The footer always says how old the numbers are; **tap the widget** whenever you want them fresh.
 - The phone is only as fresh as the Mac's last run, and plan usage only as fresh as your last Claude Code reply. The footer says how old the numbers are.
 - Works on iPad too. For an Android home-screen version, you'd need a different widget app; the same JSON file works with any of them.
 

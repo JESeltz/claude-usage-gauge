@@ -11,21 +11,47 @@
 
 import { level } from "./core.mjs"
 
-const WINDOWS = [
-  { key: "five_hour", label: "5-hour", short: "5h" },
-  { key: "seven_day", label: "Week", short: "wk" },
-]
+const KNOWN = {
+  five_hour: { label: "5-hour", short: "5h" },
+  seven_day: { label: "Week", short: "wk" },
+}
 
-/** The plan reading from Claude Code's status line input, or null if it has none. */
+/** A label for a limit Claude Code sends that isn't documented yet, e.g. "seven_day_fable" -> "Week (Fable)". */
+export function windowLabel(key) {
+  if (KNOWN[key]) return KNOWN[key]
+  const m = /^(five_hour|seven_day)_(.+)$/.exec(key)
+  const name = (m ? m[2] : key).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+  const base = m ? KNOWN[m[1]] : null
+  return { label: base ? `${base.label} (${name})` : name, short: name.slice(0, 2).toLowerCase() }
+}
+
+const isWindow = (x) => x && typeof x === "object" && Number.isFinite(x.used_percentage)
+
+/**
+ * The plan reading from Claude Code's status line input, or null if it has none. Keeps the
+ * documented 5-hour and weekly windows, any other window shaped the same way (a per-model weekly
+ * limit, if Claude Code sends one), and the spend limit (credits used of a monthly cap).
+ */
 export function planFromStatusLine(input, now = new Date()) {
   const rl = input?.rate_limits
   if (!rl || typeof rl !== "object") return null
-  const snap = { captured_at: new Date(now).toISOString() }
-  for (const w of WINDOWS) {
-    const x = rl[w.key]
-    if (x && Number.isFinite(x.used_percentage)) snap[w.key] = { used_percentage: x.used_percentage, resets_at: Number.isFinite(x.resets_at) ? x.resets_at : null }
+  const snap = { captured_at: new Date(now).toISOString(), windows: {} }
+  for (const [key, x] of Object.entries(rl)) {
+    if (key === "spend_limit") continue
+    if (isWindow(x)) snap.windows[key] = { used_percentage: x.used_percentage, resets_at: Number.isFinite(x.resets_at) ? x.resets_at : null }
   }
-  return snap.five_hour || snap.seven_day ? snap : null
+  const sl = rl.spend_limit
+  if (sl && Number.isFinite(sl.used_usd) && Number.isFinite(sl.limit_usd))
+    snap.spend_limit = { used_usd: sl.used_usd, limit_usd: sl.limit_usd, period: sl.period ?? null, resets_at: Number.isFinite(sl.resets_at) ? sl.resets_at : null }
+  return Object.keys(snap.windows).length || snap.spend_limit ? snap : null
+}
+
+/** Readings saved before extra windows were kept stored them at the top level. */
+function windowsOf(snap) {
+  if (snap.windows) return snap.windows
+  const w = {}
+  for (const k of ["five_hour", "seven_day"]) if (snap[k]) w[k] = snap[k]
+  return w
 }
 
 /**
@@ -35,20 +61,27 @@ export function planFromStatusLine(input, now = new Date()) {
 export function summarizePlan(snap, now = new Date(), warnPct = 25, criticalPct = 10) {
   if (!snap) return null
   const t = new Date(now).getTime()
+  const order = (k) => (k === "five_hour" ? 0 : k === "seven_day" ? 1 : 2)
   const windows = []
-  for (const w of WINDOWS) {
-    const x = snap[w.key]
-    if (!x) continue
+  for (const [key, x] of Object.entries(windowsOf(snap)).sort((a, b) => order(a[0]) - order(b[0]))) {
     const reset = x.resets_at !== null && x.resets_at * 1000 <= t
     const used = reset ? 0 : Math.max(0, Math.min(100, x.used_percentage))
     const left = Math.round(100 - used)
-    windows.push({ key: w.key, label: w.label, short: w.short, used: Math.round(used), left, level: level(left, warnPct, criticalPct), resets_at: reset ? null : x.resets_at, reset })
+    windows.push({ key, ...windowLabel(key), used: Math.round(used), left, level: level(left, warnPct, criticalPct), resets_at: reset ? null : x.resets_at, reset })
   }
-  if (windows.length === 0) return null
+  let spend = null
+  if (snap.spend_limit) {
+    const s = snap.spend_limit
+    const reset = s.resets_at !== null && s.resets_at * 1000 <= t
+    const used = reset ? 0 : s.used_usd
+    const leftPct = s.limit_usd > 0 ? Math.round(100 * (1 - used / s.limit_usd)) : null
+    spend = { used_usd: used, limit_usd: s.limit_usd, period: s.period, resets_at: reset ? null : s.resets_at, level: leftPct === null ? "ok" : level(leftPct, warnPct, criticalPct) }
+  }
+  if (windows.length === 0 && !spend) return null
   const ageMin = Math.max(0, Math.round((t - Date.parse(snap.captured_at)) / 60000))
-  // The battery is the tighter of the two windows: that's the one that stops you.
-  const tightest = windows.reduce((a, b) => (b.left < a.left ? b : a))
-  return { windows, tightest, captured_at: snap.captured_at, age_min: ageMin }
+  // The battery is the tightest window: that's the one that stops you.
+  const tightest = windows.length ? windows.reduce((a, b) => (b.left < a.left ? b : a)) : null
+  return { windows, tightest, spend, captured_at: snap.captured_at, age_min: ageMin }
 }
 
 /** "3:40 PM" when it's within a day, else "Tue 9 AM". */
