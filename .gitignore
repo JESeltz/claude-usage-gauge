@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+*.log
+# Never commit keys or local state (they live outside the repo anyway)
+.env
+config.json
+daily.json

@@ -1,0 +1,18 @@
+{
+  "name": "claude-usage-gauge",
+  "version": "1.0.0",
+  "description": "A battery gauge for your Anthropic API credit: terminal, Claude Code status line, Mac menu bar, iPhone widget.",
+  "type": "module",
+  "bin": {
+    "claude-gauge": "bin/claude-gauge.mjs"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "demo": "node bin/claude-gauge.mjs --demo"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "keywords": ["claude", "anthropic", "usage", "cost", "credits", "status-line", "swiftbar", "scriptable"]
+}
